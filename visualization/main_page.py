@@ -107,7 +107,8 @@ if st.button("查找"):
     log_file = f"running_log/server_log/os-copilot-local-eval-logs/traces/{session_id}.jsonl"
 
     if smart_exists(log_file):
-        with smart_open(log_file, "r") as f:
+        # with smart_open(log_file, "r") as f:
+        with smart_open(log_file, "r",encoding='utf-8') as f:
             reader = jsonlines.Reader(f)
             logs = [log for log in reader]
 
