@@ -5,7 +5,7 @@ if "." not in sys.path:
     sys.path.append(".")
 
 from copilot_agent_client.pu_client import evaluate_task_on_device
-from copilot_front_end.mobile_action_helper import list_devices, get_device_wm_size, get_device_os_version, get_device_model
+from copilot_front_end.mobile_action_helper import list_devices, get_device_wm_size, get_device_os_version, get_device_model, get_device_timezone
 from copilot_agent_server.luminaut_server import LuminautServer
 
 tmp_server_config = {
@@ -75,13 +75,15 @@ if __name__ == "__main__":
     # The device ID you want to use
     device_id = list_devices()[0]
     device_wm_size = get_device_wm_size(device_id)
-    #device_os_version = get_device_os_version(device_id)
-    #device_model = get_device_model(device_id)
+    device_os_version = get_device_os_version(device_id)
+    device_model = get_device_model(device_id)
+    device_timezone = get_device_timezone(device_id)
     device_info = {
         "device_id": device_id,
-        "device_wm_size": device_wm_size
-        #"device_os_version": device_os_version,
-        #"device_model": device_model
+        "device_wm_size": device_wm_size,
+        "device_os_version": device_os_version,
+        "device_model": device_model,
+        "device_timezone": device_timezone
     }
 
     tmp_rollout_config = local_model_config

@@ -9,3 +9,4 @@ stepfun:
 luminaut:
     api_base: "https://kapi.stepfun.com/v1/"
     api_key: "EMPTY"
+    uid: "EMPTY"

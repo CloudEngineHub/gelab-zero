@@ -21,25 +21,33 @@ import time
 async def get_session_(payload: dict, extra_info) -> str:
     model_config = payload["model_config"]
     model_provider = model_config["model_provider"]
+    uid = ""
     with smart_open("model_config.yaml", "r") as f:
         model_config_yaml = yaml.safe_load(f)
 
         if model_provider in model_config_yaml:
             api_base = model_config_yaml[model_provider]["api_base"]
             api_key = model_config_yaml[model_provider]["api_key"]
+            if "uid" in model_config_yaml[model_provider]:
+                uid = model_config_yaml[model_provider]["uid"]
 
     url = api_base + "copilot/sessions"
     headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
     # print(f"get_session_ url:{url}, api_key:{api_key}")
     device_info = extra_info["device_info"]
-    device = {"device_id": device_info["device_id"],
-              #"os_version": "",
+    device_id = device_info["device_id"]
+    device_os_version = device_info["device_os_version"]
+    device_model = device_info["device_model"]
+    timezone = device_info["device_timezone"]
+    device = {"device_id": device_id,
+              "os_version": device_os_version,
+              "device_model": device_model,
               "platform": "Android",
-              #"timezone": "",
+              "timezone": timezone,
               "resolution": device_info["device_wm_size"]
             }
     data = {"device": device,
-            "user": "",
+            "user": uid,
             #"applications": "",
             "task": payload["task"],
             "max_steps": extra_info["max_steps"],
