@@ -3,5 +3,9 @@ local:
     api_key: "EMPTY"
 
 stepfun:
-    api_base: "https://api.stepfun.com/v1"
+    api_base: "https://api.stepfun.com/v1/"
+    api_key: "EMPTY"
+
+luminaut:
+    api_base: "https://kapi.stepfun.com/v1/"
     api_key: "EMPTY"

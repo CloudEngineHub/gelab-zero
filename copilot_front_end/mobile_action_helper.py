@@ -306,6 +306,32 @@ def get_device_wm_size(device_id):
         print(f"Error getting device size: {e}")
         return None
 
+def get_device_os_version(device_id):
+
+    adb_command = _get_adb_command(device_id)
+    try:
+        # result = subprocess.run([adb_command, 'shell', 'wm', 'size'], capture_output=True, text=True)
+        command = f"{adb_command} shell getprop ro.build.version.release"
+        # print(f"Getting device {device_id} wm size with command: {command}")
+        result = subprocess.run(command, shell=True, capture_output=False, text=False)
+        return result
+    except Exception as e:
+        print(f"Error getting device os_version: {e}")
+        return None
+
+def get_device_model(device_id):
+
+    adb_command = _get_adb_command(device_id)
+    try:
+        # result = subprocess.run([adb_command, 'shell', 'wm', 'size'], capture_output=True, text=True)
+        command = f"{adb_command} shell getprop ro.product.model"
+        result = subprocess.run(command, shell=True, capture_output=False, text=False)
+        return result
+    except Exception as e:
+        print(f"Error getting device model: {e}")
+        return None
+
+
 # convert model action from api to a front-end action
 def model_act2front_act(act, wm_size):
     """
