@@ -1,24 +1,27 @@
 
 import asyncio
-import aiohttp
+import time
+from copy import deepcopy
+from typing import Any, Optional
 
+import aiohttp
+import yaml
 from megfile import smart_open
 
-import yaml
-
 from copilot_agent_server.base_server import BaseCopilotServer
-
 from copilot_agent_server.local_server_logger import LocalServerLogger
-
+from copilot_agent_server.parser_factory import get_parser
 from tools.image_tools import read_from_url, make_b64_url
 
-from copilot_agent_server.parser_factory import get_parser
+# 全局超时设置
+timeout = aiohttp.ClientTimeout(
+    total = 60,  # 总超时
+    connect = 10,  # 连接超时
+    sock_connect = 10,  # socket连接超时
+    sock_read = 30  # socket读取超时
+)
 
-from copy import deepcopy
-
-import time
-
-async def get_session_(payload: dict, extra_info) -> str:
+async def get_session_(payload: dict, extra_info) -> Optional[Any]:
     model_config = payload["model_config"]
     model_provider = model_config["model_provider"]
     uid = ""
@@ -39,32 +42,43 @@ async def get_session_(payload: dict, extra_info) -> str:
     device_os_version = device_info["device_os_version"]
     device_model = device_info["device_model"]
     timezone = device_info["device_timezone"]
-    device = {"device_id": device_id,
-              "os_version": device_os_version,
-              "device_model": device_model,
-              "platform": "Android",
-              "timezone": timezone,
-              "resolution": device_info["device_wm_size"]
-            }
-    data = {"device": device,
-            "user": uid,
-            #"applications": "",
-            "task": payload["task"],
-            "max_steps": extra_info["max_steps"],
-            "prompt_rewrite": False,
-            "model_name": model_config["model_name"],
-            "task_type": payload["task_type"],
-            }
+    device = {
+        "device_id": device_id,
+        "os_version": device_os_version,
+        "device_model": device_model,
+        "platform": "Android",
+        "timezone": timezone,
+        "resolution": device_info["device_wm_size"]
+    }
+    data = {
+        "device": device,
+        "user": uid,
+        #"applications": "",
+        "task": payload["task"],
+        "max_steps": extra_info["max_steps"],
+        "prompt_rewrite": False,
+        "model_name": model_config["model_name"],
+        "task_type": payload["task_type"],
+    }
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=data, headers=headers) as response:
-            print("状态码:", response.status)
-            json_body = await response.json()
-            print("响应内容:", json_body)
-            session_id = json_body["session_id"]
-            return session_id
+    try:
+        async with aiohttp.ClientSession(timeout = timeout) as session:
+            async with session.post(url, json = data, headers = headers) as response:
+                print("状态码:", response.status)
+                json_body = await response.json()
+                print("响应内容:", json_body)
+                session_id = json_body["session_id"]
+                return session_id
+    except aiohttp.ClientResponseError as e:
+        print(f"HTTP错误: {e.status} - {e.message}")
+    except aiohttp.ClientConnectorError as e:
+        print(f"连接错误: {e}")
+    except aiohttp.ServerTimeoutError as e:
+        print(f"服务器超时: {e}")
+    except Exception as e:
+        print(f"未知错误: {e}")
 
-async def automate_step_(payload: dict, model_config, run_id) -> str:
+async def automate_step_(payload: dict, model_config, run_id) -> Optional[Any]:
     model_provider = model_config["model_provider"]
     with smart_open("model_config.yaml", "r") as f:
         model_config_yaml = yaml.safe_load(f)
@@ -94,13 +108,21 @@ async def automate_step_(payload: dict, model_config, run_id) -> str:
             "observation": observation,
             "regenerate": False,
         }
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=data, headers=headers) as response:
-            print("状态码:", response.status)
-            json_body = await response.json()
-            print("响应内容:", json_body)
-            return json_body
+    try:
+        async with aiohttp.ClientSession(timeout = timeout) as session:
+            async with session.post(url, json = data, headers = headers) as response:
+                print("状态码:", response.status)
+                json_body = await response.json()
+                print("响应内容:", json_body)
+                return json_body
+    except aiohttp.ClientResponseError as e:
+        print(f"HTTP错误: {e.status} - {e.message}")
+    except aiohttp.ClientConnectorError as e:
+        print(f"连接错误: {e}")
+    except aiohttp.ServerTimeoutError as e:
+        print(f"服务器超时: {e}")
+    except Exception as e:
+        print(f"未知错误: {e}")
 
 class LuminautServer(BaseCopilotServer):
     run_id = ""
@@ -144,6 +166,7 @@ class LuminautServer(BaseCopilotServer):
         }
 
         session_id = asyncio.run(get_session_(payload, extra_info))
+        assert session_id != ""
 
         logger = LocalServerLogger({
             "log_dir": self.server_config["log_dir"],
@@ -264,6 +287,7 @@ class LuminautServer(BaseCopilotServer):
         
         llm_start_time = time.time()
         response = asyncio.run(automate_step_(payload, model_config, self.run_id))
+        assert response != ""
         #response = ask_llm_anything(
         #    model_provider=model_provider,
         #    model_name=model_name,
@@ -271,6 +295,7 @@ class LuminautServer(BaseCopilotServer):
         #    args=args
         #)
         llm_end_time = time.time()
+
         if "run_id" in response:
             self.run_id = response['run_id']
         action = parser.str2action(response)
